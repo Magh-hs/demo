@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SG-DA RAG BOT 🤖</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap');
+        
+        * {
+            font-family: 'Vazirmatn', sans-serif;
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f6;
+            direction: rtl;
+            text-align: right;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        
+        .config-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            color: white;
+        }
+        
+        .config-section.collapsed {
+            padding: 10px 15px;
+        }
+        
+        .config-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .config-content {
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .config-content.collapsed {
+            max-height: 0;
+            padding: 0;
+            margin: 0;
+            opacity: 0;
+        }
+        
+        .config-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .config-toggle:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .config-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .config-row label {
+            font-weight: 500;
+            min-width: 120px;
+            color: white;
+        }
+        
+        .config-row input,
+        .config-row select {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            direction: ltr;
+            text-align: left;
+            background: rgba(255,255,255,0.9);
+            transition: all 0.3s ease;
+        }
+        
+        .config-row input:focus,
+        .config-row select:focus {
+            outline: none;
+            background: white;
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
+        }
+        
+        .config-row select {
+            cursor: pointer;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #262730;
+            margin-bottom: 30px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .chat-container {
+            height: 500px;
+            overflow-y: auto;
+            border: 1px solid #e6e6e6;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 20px;
+            background: #fafafa;
+            scroll-behavior: smooth;
+        }
+        
+        .message {
+            margin: 8px 0;
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 75%;
+            width: fit-content;
+            word-wrap: break-word;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            animation: messageSlideIn 0.3s ease-out;
+        }
+        
+        @keyframes messageSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .user-message {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-left: auto;
+            text-align: right;
+            border-bottom-right-radius: 6px;
+        }
+        
+        .bot-message {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            margin-right: auto;
+            text-align: right;
+            border-bottom-left-radius: 6px;
+        }
+        
+        .input-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        #user-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            direction: rtl;
+            outline: none;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        #user-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .send-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        
+        .send-btn:hover {
+            background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+        }
+        
+        .btn-secondary {
+            background: #f0f2f6;
+            color: #262730;
+            border: 1px solid #ddd;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e2e6;
+        }
+        
+        .feedback-section {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .feedback-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            direction: rtl;
+            resize: vertical;
+            margin: 10px 0;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 380px;
+            height: 100%;
+            background: white;
+            border-left: 1px solid #ddd;
+            padding: 20px;
+            transition: right 0.3s;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        
+        .sidebar.open {
+            right: 0;
+        }
+        
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+        
+        .sidebar-overlay.active {
+            display: block;
+        }
+        
+        .context-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 3px solid #0084ff;
+        }
+        
+        .loading {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            color: #666;
+        }
+        
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #0084ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Configuration Section -->
+        <div class="config-section" id="config-section">
+            <div class="config-header" onclick="toggleConfig()">
+                <h3 style="margin: 0; font-size: 18px;">⚙️ تنظیمات API</h3>
+                <button class="config-toggle" id="config-toggle">مخفی کردن</button>
+            </div>
+            <div class="config-content" id="config-content">
+                <div style="margin-top: 15px;">
+                    <div class="config-row">
+                        <label>Base URL:</label>
+                        <input type="text" id="base-url" value="http://localhost:7777" placeholder="http://localhost:7777">
+                    </div>
+                    <div class="config-row">
+                        <label>X-API-Key:</label>
+                        <input type="text" id="api-key" value="dev_api_key" placeholder="dev_api_key">
+                    </div>
+                    <div class="config-row">
+                        <label>X-Customer-ID:</label>
+                        <select id="customer-id">
+                            <option value="Foroosh">Foroosh</option>
+                            <option value="foroosh">foroosh</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h1>به چت بات پشتیبانی خوش آمدید</h1>
+        
+        <div class="chat-container" id="chat-container">
+            <!-- Messages will appear here -->
+        </div>
+        
+        <div class="input-container">
+            <input type="text" id="user-input" placeholder="سوالتون رو اینجا بپرسید" maxlength="500">
+            <button class="send-btn" id="send-btn" onclick="sendMessage()">ارسال</button>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <span>در حال دریافت پاسخ...</span>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-primary" onclick="clearHistory()">Clear History</button>
+            <button class="btn btn-secondary" onclick="giveFeedback('like')">👍 Like</button>
+            <button class="btn btn-secondary" onclick="giveFeedback('dislike')">👎 Dislike</button>
+            <button class="btn btn-primary" onclick="toggleContext()">See the Context</button>
+        </div>
+        
+        <div id="feedback-section" class="feedback-section" style="display: none;">
+            <h4>محل فیدبک</h4>
+            <textarea id="feedback-text" class="feedback-textarea" rows="4" placeholder="اینجا دلیل لایک یا دیسلایک را بگویید..."></textarea>
+            <button class="btn btn-primary" onclick="submitFeedback()">Submit Feedback</button>
+            <button class="btn btn-secondary" onclick="cancelFeedback()">Cancel</button>
+        </div>
+        
+        <div id="success-message" class="success-message" style="display: none;">
+            با تشکر. بازخورد شما ثبت شد
+        </div>
+    </div>
+    
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleContext()"></div>
+    <div class="sidebar" id="context-sidebar">
+        <h3>مطالب مرتبط با سوال شما</h3>
+        <button class="btn btn-secondary" onclick="toggleContext()" style="float: left; margin-bottom: 20px;">بستن</button>
+        <div id="context-content">
+            <!-- Context items will appear here -->
+        </div>
+    </div>
+
+    <script>
+        let messages = [];
+        let contexts = [];
+        let currentFeedbackType = null;
+        let maxContextLength = 8; // 4 * 2 for user + bot pairs
+        
+        // Initialize decoder for UTF-8 streaming
+        const decoder = new TextDecoder('utf-8');
+        
+        function getApiConfig() {
+            return {
+                baseUrl: document.getElementById('base-url').value || 'https://185.119.242.15/gateway-rah',
+                apiKey: document.getElementById('api-key').value || 'dev_api_key',
+                customerId: document.getElementById('customer-id').value || 'RAG-20250728-B255AB22'
+            };
+        }
+        
+        function addMessage(type, content, isStreaming = false) {
+            const chatContainer = document.getElementById('chat-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            messageDiv.innerHTML = `<p>${content}</p>`;
+            
+            if (isStreaming) {
+                messageDiv.id = 'streaming-message';
+            }
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return messageDiv;
+        }
+        
+        function updateStreamingMessage(content) {
+            const streamingMsg = document.getElementById('streaming-message');
+            if (streamingMsg) {
+                streamingMsg.innerHTML = `<p>${content}▌</p>`;
+            }
+        }
+        
+        function finalizeStreamingMessage(content) {
+            const streamingMsg = document.getElementById('streaming-message');
+            if (streamingMsg) {
+                streamingMsg.innerHTML = `<p>${content}</p>`;
+                streamingMsg.removeAttribute('id');
+            }
+        }
+        
+        async function sendMessage() {
+            const userInput = document.getElementById('user-input');
+            const sendBtn = document.getElementById('send-btn');
+            const loading = document.getElementById('loading');
+            
+            const userQuery = userInput.value.trim();
+            if (!userQuery) return;
+            
+            // Disable input and show loading
+            userInput.value = '';
+            sendBtn.disabled = true;
+            loading.style.display = 'flex';
+            
+            // Add user message
+            addMessage('user', userQuery);
+            
+            // Prepare history for API
+            const history = messages.slice(-maxContextLength);
+            
+            const config = getApiConfig();
+            const params = {
+                text: userQuery,
+                history: history
+            };
+            
+            const headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'text/plain',
+                'X-API-Key': config.apiKey,
+                'X-Customer-ID': config.customerId
+            };
+            
+            try {
+                const response = await fetch(`${config.baseUrl}/rag_chatbot`, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: headers,
+                    body: JSON.stringify(params)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Create bot message container for streaming
+                const botMessageDiv = addMessage('bot', '', true);
+                let fullResponse = '';
+                
+                // Process streaming response
+                const reader = response.body.getReader();
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value, { stream: true });
+                    fullResponse += chunk;
+                    updateStreamingMessage(fullResponse);
+                }
+                
+                // Finalize the message
+                finalizeStreamingMessage(fullResponse);
+                
+                // Store in history
+                messages.push({ user: userQuery, bot: fullResponse });
+                
+                // Trim history if too long
+                if (messages.length > maxContextLength) {
+                    messages = messages.slice(-maxContextLength);
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage('bot', `خطا در ارتباط با سرور: ${error.message}`);
+            }
+            
+            // Re-enable input and hide loading
+            sendBtn.disabled = false;
+            loading.style.display = 'none';
+        }
+        
+        function clearHistory() {
+            messages = [];
+            contexts = [];
+            document.getElementById('chat-container').innerHTML = '';
+            document.getElementById('context-content').innerHTML = '';
+        }
+        
+        function giveFeedback(type) {
+            currentFeedbackType = type;
+            document.getElementById('feedback-section').style.display = 'block';
+            document.getElementById('feedback-text').focus();
+        }
+        
+        function cancelFeedback() {
+            document.getElementById('feedback-section').style.display = 'none';
+            document.getElementById('feedback-text').value = '';
+            currentFeedbackType = null;
+        }
+        
+        function submitFeedback() {
+            const feedbackText = document.getElementById('feedback-text').value;
+            
+            // In a real implementation, you would send this to your feedback API
+            const feedback = {
+                score: currentFeedbackType,
+                text: feedbackText,
+                timestamp: Date.now(),
+                customer_id: getApiConfig().customerId
+            };
+            
+            console.log('Feedback submitted:', feedback);
+            
+            // Show success message
+            document.getElementById('success-message').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('success-message').style.display = 'none';
+            }, 3000);
+            
+            // Hide feedback section
+            cancelFeedback();
+        }
+        
+        function toggleContext() {
+            const sidebar = document.getElementById('context-sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            
+            if (sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+            } else {
+                sidebar.classList.add('open');
+                overlay.classList.add('active');
+                updateContextSidebar();
+            }
+        }
+        
+        function updateContextSidebar() {
+            const contextContent = document.getElementById('context-content');
+            contextContent.innerHTML = '';
+            
+            if (contexts.length === 0) {
+                contextContent.innerHTML = '<p>هنوز متن مرتبطی موجود نیست</p>';
+                return;
+            }
+            
+            contexts.forEach((context, index) => {
+                const contextDiv = document.createElement('div');
+                contextDiv.className = 'context-item';
+                contextDiv.innerHTML = `
+                    <strong>متن ${index + 1}:</strong>
+                    <p>${context}</p>
+                    <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
+                `;
+                contextContent.appendChild(contextDiv);
+            });
+        }
+        
+        // Config toggle functionality
+        function toggleConfig() {
+            const configSection = document.getElementById('config-section');
+            const configContent = document.getElementById('config-content');
+            const configToggle = document.getElementById('config-toggle');
+            
+            if (configContent.classList.contains('collapsed')) {
+                // Show config
+                configContent.classList.remove('collapsed');
+                configSection.classList.remove('collapsed');
+                configToggle.textContent = 'مخفی کردن';
+            } else {
+                // Hide config
+                configContent.classList.add('collapsed');
+                configSection.classList.add('collapsed');
+                configToggle.textContent = 'نمایش';
+            }
+        }
+        
+        // Event listeners
+        document.getElementById('user-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // URL parameter handling
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const customerId = urlParams.get('X-Customer-ID');
+            if (customerId && (customerId === 'Foroosh' || customerId === 'foroosh')) {
+                document.getElementById('customer-id').value = customerId;
+            }
+            
+            // Auto-collapse config after 3 seconds
+            setTimeout(() => {
+                toggleConfig();
+            }, 3000);
+        });
+    </script>
+</body>
+</html>
