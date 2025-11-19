@@ -514,7 +514,16 @@
                     headers: headers,
                     body: JSON.stringify(params)
                 });
-                
+
+                // Handle 204 No Content
+                if (response.status === 204) {
+                    addMessage('bot', 'NO CONTENT from backend code 204');
+                    sendBtn.disabled = false;
+                    loading.style.display = 'none';
+                    messages.push({ user: userQuery, bot: 'NO CONTENT from backend code 204' });
+                    return; // stop further processing
+                }
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
