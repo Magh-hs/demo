@@ -466,7 +466,8 @@
         function updateStreamingMessage(content) {
             const streamingMsg = document.getElementById('streaming-message');
             if (streamingMsg) {
-                streamingMsg.innerHTML = `<p>${content}▌</p>`;
+                const html = marked.parse(content);
+                streamingMsg.innerHTML = html;
             }
         }
         
