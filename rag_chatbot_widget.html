@@ -352,6 +352,7 @@
             border: 1px solid #c3e6cb;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -449,8 +450,10 @@
             const chatContainer = document.getElementById('chat-container');
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${type}-message`;
-            messageDiv.innerHTML = `<p>${content}</p>`;
-            
+
+            const parsed_html = marked.parse(content);
+            messageDiv.innerHTML = parsed_html;
+
             if (isStreaming) {
                 messageDiv.id = 'streaming-message';
             }
