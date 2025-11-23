@@ -430,261 +430,210 @@
     </div>
 
     <script>
-        let messages = [];
-        let contexts = [];
-        let currentFeedbackType = null;
-        let maxContextLength = 8; // 4 * 2 for user + bot pairs
-        
-        // Initialize decoder for UTF-8 streaming
-        const decoder = new TextDecoder('utf-8');
-        
-        function getApiConfig() {
-            return {
-                baseUrl: document.getElementById('base-url').value || 'https://185.119.242.15/gateway-rah',
-                apiKey: document.getElementById('api-key').value || 'dev_api_key',
-                customerId: document.getElementById('customer-id').value || 'RAG-20250728-B255AB22'
-            };
-        }
-        
-        function addMessage(type, content, isStreaming = false) {
-            const chatContainer = document.getElementById('chat-container');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}-message`;
+    let messages = [];
+    let contexts = [];
+    let currentFeedbackType = null;
+    let maxContextLength = 8;
 
-            const parsed_html = marked.parse(content);
-            messageDiv.innerHTML = parsed_html;
+    // NEW: store raw markdown during streaming
+    let streamingMarkdown = "";
+    const decoder = new TextDecoder('utf-8');
 
-            if (isStreaming) {
-                messageDiv.id = 'streaming-message';
-            }
-            
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-            return messageDiv;
-        }
-        
-        function updateStreamingMessage(content) {
-            const streamingMsg = document.getElementById('streaming-message');
-            if (streamingMsg) {
-                const html = marked.parse(content);
-                streamingMsg.innerHTML = html;
-            }
-        }
-        
-        function finalizeStreamingMessage(content) {
-            const streamingMsg = document.getElementById('streaming-message');
-            if (streamingMsg) {
-                streamingMsg.innerHTML = `<p>${content}</p>`;
-                streamingMsg.removeAttribute('id');
-            }
-        }
-        
-        async function sendMessage() {
-            const userInput = document.getElementById('user-input');
-            const sendBtn = document.getElementById('send-btn');
-            const loading = document.getElementById('loading');
-            
-            const userQuery = userInput.value.trim();
-            if (!userQuery) return;
-            
-            // Disable input and show loading
-            userInput.value = '';
-            sendBtn.disabled = true;
-            loading.style.display = 'flex';
-            
-            // Add user message
-            addMessage('user', userQuery);
-            
-            // Prepare history for API
-            const history = messages.slice(-maxContextLength);
-            
-            const config = getApiConfig();
-            const params = {
-                text: userQuery,
-                history: history
-            };
-            
-            const headers = {
-                'Content-Type': 'application/json',
-                'Accept': 'text/plain',
-                'X-API-Key': config.apiKey,
-                'X-Customer-ID': config.customerId
-            };
-            
-            try {
-                const response = await fetch(`${config.baseUrl}/rag_chatbot`, {
-                    method: 'POST',
-                    mode: 'cors',
-                    headers: headers,
-                    body: JSON.stringify(params)
-                });
+    function getApiConfig() {
+        return {
+            baseUrl: document.getElementById('base-url').value || 'https://185.119.242.15/gateway-rah',
+            apiKey: document.getElementById('api-key').value || 'dev_api_key',
+            customerId: document.getElementById('customer-id').value || 'RAG-20250728-B255AB22'
+        };
+    }
 
-                // Handle 204 No Content
-                if (response.status === 204) {
-                    addMessage('bot', 'NO CONTENT from backend code 204');
-                    sendBtn.disabled = false;
-                    loading.style.display = 'none';
-                    messages.push({ user: userQuery, bot: 'NO CONTENT from backend code 204' });
-                    return; // stop further processing
-                }
+    // Create a message box
+    function addMessage(type, content, isStreaming = false) {
+        const chat = document.getElementById('chat-container');
+        const div = document.createElement('div');
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                // Create bot message container for streaming
-                const botMessageDiv = addMessage('bot', '', true);
-                let fullResponse = '';
-                
-                // Process streaming response
-                const reader = response.body.getReader();
-                
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    
-                    const chunk = decoder.decode(value, { stream: true });
-                    fullResponse += chunk;
-                    updateStreamingMessage(fullResponse);
-                }
-                
-                // Finalize the message
-                finalizeStreamingMessage(fullResponse);
-                
-                // Store in history
-                messages.push({ user: userQuery, bot: fullResponse });
-                
-                // Trim history if too long
-                if (messages.length > maxContextLength) {
-                    messages = messages.slice(-maxContextLength);
-                }
-                
-            } catch (error) {
-                console.error('Error:', error);
-                addMessage('bot', `خطا در ارتباط با سرور: ${error.message}`);
-            }
-            
-            // Re-enable input and hide loading
-            sendBtn.disabled = false;
-            loading.style.display = 'none';
+        div.className = `message ${type}-message`;
+        div.innerHTML = marked.parse(content);
+
+        if (isStreaming) div.id = "streaming-message";
+
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+        return div;
+    }
+
+    // UPDATE STREAMING: append raw markdown → temporary render
+    function updateStreamingMessage(chunk) {
+        streamingMarkdown += chunk;
+        const div = document.getElementById("streaming-message");
+        if (div) div.innerHTML = marked.parse(streamingMarkdown);
+    }
+
+    // FINAL RENDER: full markdown → final HTML
+    function finalizeStreamingMessage() {
+        const div = document.getElementById("streaming-message");
+        if (div) {
+            div.innerHTML = marked.parse(streamingMarkdown);
+            div.removeAttribute("id");
         }
+        streamingMarkdown = "";
+    }
+
+    async function sendMessage() {
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const loading = document.getElementById('loading');
         
-        function clearHistory() {
-            messages = [];
-            contexts = [];
-            document.getElementById('chat-container').innerHTML = '';
-            document.getElementById('context-content').innerHTML = '';
-        }
-        
-        function giveFeedback(type) {
-            currentFeedbackType = type;
-            document.getElementById('feedback-section').style.display = 'block';
-            document.getElementById('feedback-text').focus();
-        }
-        
-        function cancelFeedback() {
-            document.getElementById('feedback-section').style.display = 'none';
-            document.getElementById('feedback-text').value = '';
-            currentFeedbackType = null;
-        }
-        
-        function submitFeedback() {
-            const feedbackText = document.getElementById('feedback-text').value;
-            
-            // In a real implementation, you would send this to your feedback API
-            const feedback = {
-                score: currentFeedbackType,
-                text: feedbackText,
-                timestamp: Date.now(),
-                customer_id: getApiConfig().customerId
-            };
-            
-            console.log('Feedback submitted:', feedback);
-            
-            // Show success message
-            document.getElementById('success-message').style.display = 'block';
-            setTimeout(() => {
-                document.getElementById('success-message').style.display = 'none';
-            }, 3000);
-            
-            // Hide feedback section
-            cancelFeedback();
-        }
-        
-        function toggleContext() {
-            const sidebar = document.getElementById('context-sidebar');
-            const overlay = document.getElementById('sidebar-overlay');
-            
-            if (sidebar.classList.contains('open')) {
-                sidebar.classList.remove('open');
-                overlay.classList.remove('active');
-            } else {
-                sidebar.classList.add('open');
-                overlay.classList.add('active');
-                updateContextSidebar();
-            }
-        }
-        
-        function updateContextSidebar() {
-            const contextContent = document.getElementById('context-content');
-            contextContent.innerHTML = '';
-            
-            if (contexts.length === 0) {
-                contextContent.innerHTML = '<p>هنوز متن مرتبطی موجود نیست</p>';
+        const userQuery = userInput.value.trim();
+        if (!userQuery) return;
+
+        userInput.value = "";
+        sendBtn.disabled = true;
+        loading.style.display = "flex";
+
+        addMessage("user", userQuery);
+
+        const history = messages.slice(-maxContextLength);
+        const config = getApiConfig();
+
+        const params = { text: userQuery, history };
+        const headers = {
+            "Content-Type": "application/json",
+            "Accept": "text/plain",
+            "X-API-Key": config.apiKey,
+            "X-Customer-ID": config.customerId
+        };
+
+        try {
+            const response = await fetch(`${config.baseUrl}/rag_chatbot`, {
+                method: "POST",
+                mode: "cors",
+                headers,
+                body: JSON.stringify(params)
+            });
+
+            if (response.status === 204) {
+                addMessage("bot", "NO CONTENT (204)");
+                loading.style.display = "none";
+                sendBtn.disabled = false;
                 return;
             }
-            
-            contexts.forEach((context, index) => {
-                const contextDiv = document.createElement('div');
-                contextDiv.className = 'context-item';
-                contextDiv.innerHTML = `
-                    <strong>متن ${index + 1}:</strong>
-                    <p>${context}</p>
-                    <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
-                `;
-                contextContent.appendChild(contextDiv);
-            });
+
+            const botDiv = addMessage("bot", "", true);
+            streamingMarkdown = "";
+
+            const reader = response.body.getReader();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                updateStreamingMessage(chunk);
+            }
+
+            finalizeStreamingMessage();
+
+            messages.push({ user: userQuery, bot: streamingMarkdown });
+
+        } catch (err) {
+            addMessage("bot", "خطا در ارتباط با سرور: " + err.message);
         }
+
+        sendBtn.disabled = false;
+        loading.style.display = "none";
+    }
+
+    function clearHistory() {
+        messages = [];
+        contexts = [];
+        document.getElementById('chat-container').innerHTML = '';
+        document.getElementById('context-content').innerHTML = '';
+    }
+
+    function giveFeedback(type) {
+        currentFeedbackType = type;
+        document.getElementById('feedback-section').style.display = 'block';
+        document.getElementById('feedback-text').focus();
+    }
+
+    function cancelFeedback() {
+        document.getElementById('feedback-section').style.display = 'none';
+        document.getElementById('feedback-text').value = '';
+        currentFeedbackType = null;
+    }
+
+    function submitFeedback() {
+        const text = document.getElementById('feedback-text').value;
+
+        const data = {
+            score: currentFeedbackType,
+            text,
+            timestamp: Date.now(),
+            customer_id: getApiConfig().customerId
+        };
         
-        // Config toggle functionality
-        function toggleConfig() {
-            const configSection = document.getElementById('config-section');
-            const configContent = document.getElementById('config-content');
-            const configToggle = document.getElementById('config-toggle');
-            
-            if (configContent.classList.contains('collapsed')) {
-                // Show config
-                configContent.classList.remove('collapsed');
-                configSection.classList.remove('collapsed');
-                configToggle.textContent = 'مخفی کردن';
-            } else {
-                // Hide config
-                configContent.classList.add('collapsed');
-                configSection.classList.add('collapsed');
-                configToggle.textContent = 'نمایش';
-            }
+        console.log("Feedback:", data);
+
+        document.getElementById('success-message').style.display = 'block';
+        setTimeout(() => {
+            document.getElementById('success-message').style.display = 'none';
+        }, 3000);
+
+        cancelFeedback();
+    }
+
+    function toggleContext() {
+        const sidebar = document.getElementById('context-sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+
+        if (sidebar.classList.contains('open')) updateContextSidebar();
+    }
+
+    function updateContextSidebar() {
+        const container = document.getElementById('context-content');
+        container.innerHTML = "";
+
+        if (contexts.length === 0) {
+            container.innerHTML = "<p>هیچ کانتکستی ثبت نشده</p>";
+            return;
         }
-        
-        // Event listeners
-        document.getElementById('user-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
+
+        contexts.forEach((c, i) => {
+            const div = document.createElement('div');
+            div.className = "context-item";
+            div.innerHTML = `<strong>متن ${i+1}:</strong><p>${c}</p>`;
+            container.appendChild(div);
         });
-        
-        // URL parameter handling
-        window.addEventListener('load', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const customerId = urlParams.get('X-Customer-ID');
-            if (customerId && (customerId === 'Foroosh' || customerId === 'foroosh')) {
-                document.getElementById('customer-id').value = customerId;
-            }
-            
-            // Auto-collapse config after 3 seconds
-            setTimeout(() => {
-                toggleConfig();
-            }, 3000);
-        });
-    </script>
+    }
+
+    function toggleConfig() {
+        const section = document.getElementById('config-section');
+        const content = document.getElementById('config-content');
+        const btn = document.getElementById('config-toggle');
+
+        const collapsed = content.classList.toggle('collapsed');
+        section.classList.toggle('collapsed', collapsed);
+        btn.textContent = collapsed ? "نمایش" : "مخفی کردن";
+    }
+
+    document.getElementById("user-input").addEventListener("keypress", e => {
+        if (e.key === "Enter") sendMessage();
+    });
+
+    window.addEventListener("load", () => {
+        const params = new URLSearchParams(window.location.search);
+        const customer = params.get("X-Customer-ID");
+
+        if (customer) {
+            document.getElementById("customer-id").value = customer;
+        }
+
+        setTimeout(() => toggleConfig(), 3000);
+    });
+</script>
 </body>
 </html>
