@@ -476,7 +476,7 @@
             div.innerHTML = marked.parse(streamingMarkdown);
             div.removeAttribute("id");
         }
-        streamingMarkdown = "";
+        //streamingMarkdown = "";
     }
 
     async function sendMessage() {
@@ -535,6 +535,7 @@
             finalizeStreamingMessage();
 
             messages.push({ user: userQuery, bot: streamingMarkdown });
+            streamingMarkdown = "";
 
         } catch (err) {
             addMessage("bot", "خطا در ارتباط با سرور: " + err.message);
