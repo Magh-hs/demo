@@ -164,6 +164,37 @@
             margin-left: auto;
             text-align: right;
             border-bottom-right-radius: 6px;
+            position: relative;
+        }
+        
+        .resend-btn {
+            position: absolute;
+            top: 50%;
+            left: -35px;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            color: #667eea;
+        }
+        
+        .resend-btn:hover {
+            background: white;
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .user-message:hover .resend-btn {
+            display: flex;
         }
         
         .bot-message {
@@ -456,6 +487,16 @@
         div.className = `message ${type}-message`;
         div.innerHTML = marked.parse(content);
 
+        // Add resend button only for user messages
+        if (type === 'user') {
+            const resendBtn = document.createElement('button');
+            resendBtn.className = 'resend-btn';
+            resendBtn.innerHTML = '↻';
+            resendBtn.title = 'ارسال مجدد';
+            resendBtn.onclick = () => resendMessage(content);
+            div.appendChild(resendBtn);
+        }
+
         if (isStreaming) div.id = "streaming-message";
 
         chat.appendChild(div);
@@ -478,6 +519,14 @@
             div.removeAttribute("id");
         }
         //streamingMarkdown = "";
+    }
+
+    // Resend a message by refreshing and setting the input value
+    function resendMessage(message) {
+        // Store the message in sessionStorage so it persists through page refresh
+        sessionStorage.setItem('resendMessage', message);
+        // Refresh the page
+        location.reload();
     }
 
     async function sendMessage() {
@@ -632,6 +681,17 @@
 
         if (customer) {
             document.getElementById("customer-id").value = customer;
+        }
+
+        // Check for resend message after page refresh
+        const resendMsg = sessionStorage.getItem('resendMessage');
+        if (resendMsg) {
+            // Clear the stored message
+            sessionStorage.removeItem('resendMessage');
+            // Set the input value and send the message
+            document.getElementById('user-input').value = resendMsg;
+            // Small delay to ensure DOM is ready
+            setTimeout(() => sendMessage(), 100);
         }
 
         setTimeout(() => toggleConfig(), 3000);
